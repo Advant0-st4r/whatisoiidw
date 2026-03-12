@@ -1,0 +1,53 @@
+{
+    "task": "CI_BUILD_FAILURE_LOCKFILE_MISMATCH",
+    "platform": "Render",
+    "runtime": "Node.js 22.x",
+    "package_manager": "pnpm",
+    "failure_summary": {
+        "primary_error": "ERR_PNPM_OUTDATED_LOCKFILE",
+        "secondary_error": "vite: not found",
+        "root_condition": "pnpm install aborted due to lockfile mismatch, preventing dependencies from installing"
+    },
+    "root_cause": "package.json was updated (Tailwind v4 + @tailwindcss/vite) but pnpm-lock.yaml was not regenerated and committed, causing CI's frozen-lockfile enforcement to abort installation.",
+    "evidence": {
+        "dependency_added": "@tailwindcss/vite@^4.0.0",
+        "dependency_mismatch": "tailwindcss lockfile ^3.4.17 vs package.json ^4.0.0",
+        "symptom_chain": [
+            "pnpm install fails",
+            "node_modules not installed",
+            "vite binary missing",
+            "build script fails"
+        ]
+    },
+    "preferred_fix": {
+        "strategy": "Regenerate and commit the lockfile so CI frozen installs succeed",
+        "commands": [
+            "rm -f pnpm-lock.yaml",
+            "pnpm install",
+            "pnpm run build",
+            "git add pnpm-lock.yaml package.json",
+            "git commit -m \"fix: regenerate pnpm lockfile for CI\"",
+            "git push"
+        ]
+    },
+    "render_build_command": "pnpm install --frozen-lockfile && pnpm run build",
+    "verification": [
+        "pnpm install --frozen-lockfile succeeds locally",
+        "vite build runs successfully",
+        "Render build logs show dependency installation completing",
+        "vite binary executed successfully",
+        "deployment completes"
+    ],
+    "temporary_fallback": {
+        "strategy": "Allow non-frozen installs in CI until lockfile is fixed",
+        "build_command": "pnpm install --no-frozen-lockfile && pnpm run build"
+    },
+    "rollback": "git revert <commit_sha>",
+    "success_criteria": [
+        "pnpm install completes without ERR_PNPM_OUTDATED_LOCKFILE",
+        "vite binary available in node_modules/.bin",
+        "Render build succeeds",
+        "application deploys successfully"
+    ],
+    "one_sentence_justification": "Regenerating and committing the lockfile realigns dependency state so pnpm's frozen-lockfile CI mode can install dependencies deterministically."
+}
