@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
-    "build": "vite build",
+    "postinstall": "cd node_modules/sqlite3 && npm run install",
+    "build": "pnpm install && pnpm rebuild sqlite3 && pnpm build",
     "preview": "vite preview",
     "clean": "powershell -Command \"if (Test-Path node_modules) { Remove-Item -Recurse -Force node_modules }; if (Test-Path dist) { Remove-Item -Recurse -Force dist }\"",
     "lint": "tsc --noEmit",

@@ -2,7 +2,7 @@ import "dotenv/config";
 import express from "express";
 import { createServer as createViteServer } from "vite";
 import path from "path";
-import { open } from "better-sqlite3";
+import { open, Database } from "better-sqlite3";
 import multer from "multer";
 import { GoogleGenAI, Type } from "@google/genai";
 import { Parser } from "json2csv";
@@ -43,7 +43,7 @@ async function startServer() {
   // Database Setup
   const db = await open({
     filename: "capmap.db",
-    driver: better - sqlite3.Database
+    driver: "better-sqlite3.Database"
   });
 
   await db.exec("PRAGMA journal_mode = WAL");
