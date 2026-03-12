@@ -609,6 +609,9 @@ Legacy CRM,Customer Management,Account Updates,Sales,On-Prem`;
     }
   });
 
+  // Health check (required by render.yaml)
+  app.get("/health", (_req, res) => res.json({ status: "ok" }));
+
   // --- Vite Integration ---
   if (!isProd) {
     const vite = await createViteServer({
