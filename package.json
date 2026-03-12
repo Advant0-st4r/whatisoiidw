@@ -31,8 +31,7 @@
     "react-dom": "latest",
     "react-router-dom": "latest",
     "recharts": "latest",
-    "sqlite": "latest",
-    "sqlite3": "latest",
+    "better-sqlite3": "latest",
     "tailwind-merge": "latest",
     "tailwindcss": "latest",
     "vite": "latest"
