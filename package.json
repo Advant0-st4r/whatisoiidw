@@ -31,7 +31,7 @@
     "react-dom": "latest",
     "react-router-dom": "latest",
     "recharts": "latest",
-    "better-sqlite3": "latest",
+    "better-better-sqlite3": "latest",
     "tailwind-merge": "latest",
     "tailwindcss": "latest",
     "vite": "latest"
@@ -46,7 +46,7 @@
     "@types/papaparse": "latest",
     "@types/react": "latest",
     "@types/react-dom": "latest",
-    "@types/sqlite3": "latest",
+    "@types/better-sqlite3": "latest",
     "autoprefixer": "latest",
     "postcss": "latest",
     "tsx": "latest",

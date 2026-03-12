@@ -68,7 +68,7 @@ importers:
       sqlite:
         specifier: ^5.1.1
         version: 5.1.1
-      sqlite3:
+      better-sqlite3:
         specifier: ^5.1.7
         version: 5.1.7
       tailwind-merge:
@@ -108,7 +108,7 @@ importers:
       '@types/react-dom':
         specifier: ^19.0.3
         version: 19.2.3(@types/react@19.2.14)
-      '@types/sqlite3':
+      '@types/better-sqlite3':
         specifier: ^3.1.11
         version: 3.1.11
       autoprefixer:
@@ -959,7 +959,7 @@ packages:
   '@types/serve-static@1.15.10':
     resolution: {integrity: sha512-tRs1dB+g8Itk72rlSI2ZrW6vZg0YrLI81iQSTkMmOqnqCaNr/8Ek4VwWcN5vZgCYWbg/JJSGBlUaYGAOP73qBw==}
 
-  '@types/sqlite3@3.1.11':
+  '@types/better-sqlite3@3.1.11':
     resolution: {integrity: sha512-KYF+QgxAnnAh7DWPdNDroxkDI3/MspH1NMx6m/N/6fT1G6+jvsw4/ZePt8R8cr7ta58aboeTfYFBDxTJ5yv15w==}
 
   '@vitejs/plugin-react@4.7.0':
@@ -2362,7 +2362,7 @@ packages:
     resolution: {integrity: sha512-UXWMKhLOwVKb728IUtQPXxfYU+usdybtUrK/8uGE8CQMvrhOpwvzDBwj0QhSL7MQc7vIsISBG8VQ8+IDQxpfQA==}
     engines: {node: '>=0.10.0'}
 
-  sqlite3@5.1.7:
+  better-sqlite3@5.1.7:
     resolution: {integrity: sha512-GGIyOiFaG+TUra3JIfkI/zGP8yZYLPQ0pl1bH+ODjiX57sPhrLU5sQJn1y9bDKZUFYkX1crlrPfSYt0BKKdkog==}
 
   sqlite@5.1.1:
@@ -3252,7 +3252,7 @@ snapshots:
       '@types/node': 22.19.15
       '@types/send': 0.17.6
 
-  '@types/sqlite3@3.1.11':
+  '@types/better-sqlite3@3.1.11':
     dependencies:
       '@types/node': 22.19.15
 
@@ -4820,7 +4820,7 @@ snapshots:
 
   source-map-js@1.2.1: {}
 
-  sqlite3@5.1.7:
+  better-sqlite3@5.1.7:
     dependencies:
       bindings: 1.5.0
       node-addon-api: 7.1.1
