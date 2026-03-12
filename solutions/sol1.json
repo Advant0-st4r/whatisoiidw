@@ -1,0 +1,56 @@
+{
+    "task": "DEPLOYMENT_ROOT_CAUSE_FIX",
+    "context": {
+        "platform": "Render",
+        "runtime": "Node.js v22.x",
+        "package_manager": "pnpm",
+        "native_dependency": "better-sqlite3",
+        "symptom": "Runtime crash: missing native binding better_sqlite3.node"
+    },
+    "objective": "Identify the root cause of the missing native module binding and apply the smallest reversible fix that restores deployment stability.",
+    "rules": [
+        "Use first-principles reasoning.",
+        "Focus on native module compilation, Node ABI compatibility, and pnpm build behavior.",
+        "Do not modify application logic.",
+        "Propose only one preferred fix and one fallback.",
+        "All fixes must be reversible with a single commit revert."
+    ],
+    "analysis_steps": [
+        "Confirm binding error indicates missing compiled native module.",
+        "Check Node version and ABI compatibility.",
+        "Verify pnpm install stage compiles native dependencies.",
+        "Verify compiled binary exists in node_modules.",
+        "Determine if runtime environment differs from build environment."
+    ],
+    "diagnostic_commands": [
+        "node -v",
+        "pnpm -v",
+        "pnpm install",
+        "pnpm rebuild better-sqlite3",
+        "ls node_modules/**/better-sqlite3/**/*.node"
+    ],
+    "preferred_fix": {
+        "strategy": "Ensure native module compilation during build stage",
+        "render_build_command": "pnpm install --frozen-lockfile && pnpm rebuild better-sqlite3 && pnpm run build"
+    },
+    "fallback_fix": {
+        "strategy": "Pin Node version to match better-sqlite3 prebuilt binary ABI",
+        "package_json_patch": {
+            "engines": {
+                "node": "20.x"
+            }
+        }
+    },
+    "verification": [
+        "Confirm better_sqlite3.node exists in node_modules",
+        "Deploy to Render",
+        "Confirm runtime starts without binding errors",
+        "Verify health endpoint returns 200"
+    ],
+    "rollback": "git revert <commit_sha>",
+    "success_criteria": [
+        "Application starts successfully on Render",
+        "better-sqlite3 loads without binding errors",
+        "Deployment health checks pass"
+    ]
+}
