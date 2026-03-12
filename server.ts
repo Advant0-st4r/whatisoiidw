@@ -2,7 +2,7 @@ import "dotenv/config";
 import express from "express";
 import { createServer as createViteServer } from "vite";
 import path from "path";
-import { open, Database } from "better-sqlite3";
+import Database from "better-sqlite3";
 import multer from "multer";
 import { GoogleGenAI, Type } from "@google/genai";
 import { Parser } from "json2csv";
@@ -40,11 +40,14 @@ async function startServer() {
   app.use(express.json());
   app.use(cookieParser());
 
-  // Database Setup
-  const db = await open({
-    filename: "capmap.db",
-    driver: "better-sqlite3.Database"
-  });
+  // Database Setup (Surgical bridge for better-sqlite3 compatibility)
+  const nativeDb = new Database("capmap.db");
+  const db = {
+    exec: (sql: string) => nativeDb.exec(sql),
+    get: (sql: string, ...params: any[]) => nativeDb.prepare(sql).get(...params),
+    all: (sql: string, ...params: any[]) => nativeDb.prepare(sql).all(...params),
+    run: (sql: string, ...params: any[]) => nativeDb.prepare(sql).run(...params)
+  };
 
   await db.exec("PRAGMA journal_mode = WAL");
 
