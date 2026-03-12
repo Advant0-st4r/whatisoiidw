@@ -3,7 +3,7 @@ services:
     name: capmap-web
     env: node
     rootDir: .
-    buildCommand: pnpm install; pnpm build
+    buildCommand: pnpm install && pnpm rebuild && pnpm build
     startCommand: pnpm start
     healthCheckPath: /health
     healthCheckIntervalSeconds: 5
