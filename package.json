@@ -37,7 +37,6 @@
     "vite": "latest"
   },
   "devDependencies": {
-    "better-sqlite3": "latest",
     "@types/bcryptjs": "latest",
     "@types/cookie-parser": "latest",
     "@types/express": "latest",
