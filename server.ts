@@ -2,8 +2,7 @@ import "dotenv/config";
 import express from "express";
 import { createServer as createViteServer } from "vite";
 import path from "path";
-import sqlite3 from "sqlite3";
-import { open, Database } from "sqlite";
+import Database from "better-sqlite3";
 import multer from "multer";
 import { GoogleGenAI, Type } from "@google/genai";
 import { Parser } from "json2csv";
@@ -41,11 +40,14 @@ async function startServer() {
   app.use(express.json());
   app.use(cookieParser());
 
-  // Database Setup
-  const db = await open({
-    filename: "capmap.db",
-    driver: sqlite3.Database
-  });
+  // Database Setup (Surgical bridge for better-sqlite3 compatibility)
+  const nativeDb = new Database("capmap.db");
+  const db = {
+    exec: (sql: string) => nativeDb.exec(sql),
+    get: (sql: string, ...params: any[]) => nativeDb.prepare(sql).get(...params),
+    all: (sql: string, ...params: any[]) => nativeDb.prepare(sql).all(...params),
+    run: (sql: string, ...params: any[]) => nativeDb.prepare(sql).run(...params)
+  };
 
   await db.exec("PRAGMA journal_mode = WAL");
 
@@ -154,61 +156,11 @@ async function startServer() {
     ('cap5', 'Talent Acquisition', 'HR', 2);
   `);
 
-  // --- Health Check Endpoints ---
-  
-  // Helper: event-loop responsiveness
-  function isEventLoopResponsive(thresholdMs = 40) {
-    const start = process.hrtime.bigint();
-    return new Promise((resolve) => {
-      setImmediate(() => {
-        const diffMs = Number(process.hrtime.bigint() - start) / 1e6;
-        resolve(diffMs < thresholdMs);
-      });
-    });
-  }
-
-  app.get("/health/live", async (req, res) => {
-    const ok = await isEventLoopResponsive();
-    if (!ok) return res.status(500).json({ status: "fail", uptime_seconds: process.uptime() });
-    return res.status(200).json({ status: "ok", uptime_seconds: process.uptime() });
-  });
-
-  app.get("/health/ready", async (req, res) => {
-    const start = Date.now();
-    try {
-      // Single quick DB probe
-      const r = await db.get("SELECT 1");
-      if (!r) throw new Error("db-probe-failed");
-      
-      const latency = Date.now() - start;
-      if (latency > 50) {
-        return res.status(503).json({ 
-          status: "degraded", 
-          db: "connected", 
-          uptime_seconds: process.uptime(), 
-          latency_ms: latency 
-        });
-      }
-      return res.status(200).json({ 
-        status: "ok", 
-        db: "connected", 
-        uptime_seconds: process.uptime(), 
-        latency_ms: latency, 
-        version: process.env.APP_VERSION || "unknown" 
-      });
-    } catch (err: any) {
-      return res.status(503).json({ status: "fail", db: "down", error: err.message });
-    }
-  });
-
-  app.get("/health", (req, res) => res.redirect(307, "/health/ready"));
-
   // Auth Middleware
   const authMiddleware = (req: express.Request, res: express.Response, next: express.NextFunction) => {
-    if (req.path.startsWith("/health")) return next();
     if (req.path === "/api/auth/login") return next();
     if (!req.path.startsWith("/api/")) return next();
-    
+
     const token = req.cookies.token;
     if (!token) return res.status(401).json({ error: "Unauthorized" });
     try {
@@ -260,7 +212,7 @@ async function startServer() {
     try {
       const { capabilityId } = req.body;
       const userId = (req as any).user.id;
-      
+
       // Quota Check
       const today = new Date().toISOString().split("T")[0];
       let usage = await db.get("SELECT count FROM generation_usage WHERE user_id = ? AND date = ?", userId, today) as any;
@@ -314,7 +266,7 @@ async function startServer() {
       const metricsJson = response.text;
       const id = Math.random().toString(36).substring(7);
       await db.run("INSERT INTO metrics (id, capability_id, prompt_hash, kpi_json) VALUES (?, ?, ?, ?)", id, capabilityId, promptHash, metricsJson);
-      
+
       // Update usage
       if (usage) {
         await db.run("UPDATE generation_usage SET count = count + 1 WHERE user_id = ? AND date = ?", userId, today);
@@ -334,14 +286,14 @@ async function startServer() {
     const totalCapabilities = await db.get("SELECT COUNT(*) as count FROM capabilities") as any;
     const totalSystems = await db.get("SELECT COUNT(*) as count FROM it_assets") as any;
     const avgMaturity = await db.get("SELECT AVG(maturity_level) as avg FROM capabilities") as any;
-    
+
     const today = new Date().toISOString().split("T")[0];
     const userId = (req as any).user?.id || "anonymous";
     await db.run("INSERT INTO capability_snapshots (user_id, snapshot_date, avg_maturity) SELECT ?, ?, ? WHERE NOT EXISTS (SELECT 1 FROM capability_snapshots WHERE snapshot_date = ?)", userId, today, avgMaturity.avg || 0, today);
 
     // Mocking some chart data based on real counts for simplicity, or we can aggregate
     const domainDistribution = await db.all("SELECT domain as name, COUNT(*) as value FROM capabilities GROUP BY domain");
-    
+
     const snapshots = await db.all("SELECT snapshot_date as name, avg_maturity as value FROM capability_snapshots ORDER BY snapshot_date ASC") as any[];
 
     res.json({
@@ -378,7 +330,7 @@ async function startServer() {
           }
         }
       });
-      
+
       let imageData = null;
       for (const part of response.candidates?.[0]?.content?.parts || []) {
         if (part.inlineData) {
@@ -451,7 +403,7 @@ Legacy CRM,Customer Management,Account Updates,Sales,On-Prem`;
         if (assetName) {
           const assetId = `asset_${assetName.replace(/[^a-zA-Z0-9]/g, "_").toLowerCase()}`;
           await db.run("INSERT OR IGNORE INTO it_assets (id, name, type, environment) VALUES (?, ?, ?, ?)", assetId, assetName, "System", env || "Production");
-          
+
           const relId = `rel_${assetId}_${capId}`;
           await db.run("INSERT OR IGNORE INTO relationships (id, source_id, source_type, target_id, target_type, relationship_type) VALUES (?, ?, ?, ?, ?, ?)", relId, assetId, "it_asset", capId, "capability", "supports");
         }
@@ -460,7 +412,7 @@ Legacy CRM,Customer Management,Account Updates,Sales,On-Prem`;
           const processId = `proc_${processName.replace(/[^a-zA-Z0-9]/g, "_").toLowerCase()}`;
           await db.run("INSERT OR IGNORE INTO processes (id, name, owner, domain, capability_id) VALUES (?, ?, ?, ?, ?)", processId, processName, owner || "Unknown", "Demo", capId);
         }
-        
+
         inserted++;
       }
 
@@ -488,7 +440,7 @@ Legacy CRM,Customer Management,Account Updates,Sales,On-Prem`;
         { name: "Value Contribution", value: 95, unit: "Score", description: "Directly drives fulfillment." }
       ];
       await db.run("INSERT OR REPLACE INTO metrics (capability_id, kpi_json) VALUES (?, ?)", "cap_orderprocessing", JSON.stringify(orderProcMetrics));
-      
+
       await db.run("COMMIT");
     } catch (e) {
       await db.run("ROLLBACK");
@@ -510,18 +462,18 @@ Legacy CRM,Customer Management,Account Updates,Sales,On-Prem`;
   app.post("/api/capabilities/bulk", upload.single("file"), async (req, res) => {
     const file = (req as any).file;
     if (!file) return res.status(400).json({ error: "No file uploaded" });
-    
+
     if (!file.originalname.toLowerCase().endsWith('.csv')) {
       return res.status(400).json({ error: "File must be a .csv" });
     }
-    
+
     const csvString = file.buffer.toString("utf-8");
     if (!csvString.trim()) {
       return res.status(400).json({ error: "CSV is empty" });
     }
 
     const parsed = Papa.parse(csvString, { header: true, skipEmptyLines: true });
-    
+
     if (parsed.errors.length > 0 && parsed.errors[0].code !== 'TooFewFields') {
       return res.status(400).json({ error: "Invalid CSV format", details: parsed.errors });
     }
@@ -544,16 +496,16 @@ Legacy CRM,Customer Management,Account Updates,Sales,On-Prem`;
         // Find the actual header key that matches case-insensitively
         const capKey = Object.keys(row).find(k => k.trim().toLowerCase() === 'capability' || k.trim().toLowerCase() === 'name');
         if (!capKey) continue;
-        
+
         const capName = row[capKey]?.trim();
         if (!capName) continue;
 
         const domainKey = Object.keys(row).find(k => k.trim().toLowerCase() === 'domain');
         const domain = domainKey ? row[domainKey] : "Imported";
-        
+
         const ownerKey = Object.keys(row).find(k => k.trim().toLowerCase() === 'owner');
         const owner = ownerKey ? row[ownerKey] : "";
-        
+
         const systemKey = Object.keys(row).find(k => k.trim().toLowerCase() === 'it system');
         const systemName = systemKey ? row[systemKey]?.trim() : "";
 
@@ -566,11 +518,11 @@ Legacy CRM,Customer Management,Account Updates,Sales,On-Prem`;
         const capId = `cap_${capName.replace(/[^a-zA-Z0-9]/g, "_").toLowerCase()}`;
         await db.run("INSERT OR REPLACE INTO capabilities (id, name, domain, maturity_level, owner, linked_system_ids, cost_center, sla_target_ms, last_reviewed) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
           capId, capName, domain || "Imported", 1, owner, systemName, "", 0, new Date().toISOString());
-        
+
         if (systemName) {
           const assetId = `asset_${systemName.replace(/[^a-zA-Z0-9]/g, "_").toLowerCase()}`;
           await db.run("INSERT OR IGNORE INTO it_assets (id, name, type, environment) VALUES (?, ?, ?, ?)", assetId, systemName, "System", env || "Production");
-          
+
           const relId = `rel_${assetId}_${capId}`;
           await db.run("INSERT OR IGNORE INTO relationships (id, source_id, source_type, target_id, target_type, relationship_type) VALUES (?, ?, ?, ?, ?, ?)", relId, assetId, "it_asset", capId, "capability", "supports");
         }
@@ -588,7 +540,7 @@ Legacy CRM,Customer Management,Account Updates,Sales,On-Prem`;
       const avgMaturityResult = await db.get("SELECT AVG(maturity_level) as avg FROM capabilities") as any;
       const avgMaturity = avgMaturityResult.avg || 0;
       await db.run("INSERT INTO capability_snapshots (user_id, snapshot_date, avg_maturity) VALUES (?, ?, ?) ON CONFLICT(snapshot_date) DO UPDATE SET avg_maturity = excluded.avg_maturity, user_id = excluded.user_id", userId, today, avgMaturity);
-      
+
       await db.run("COMMIT");
     } catch (err: any) {
       await db.run("ROLLBACK");
@@ -606,7 +558,7 @@ Legacy CRM,Customer Management,Account Updates,Sales,On-Prem`;
   app.post("/api/export", async (req, res, next) => {
     try {
       const { type } = req.body;
-      
+
       const data = await db.all(`
         SELECT c.name as Capability, c.domain as Domain, c.maturity_level as Maturity, m.kpi_json as Metrics
         FROM capabilities c
@@ -625,7 +577,7 @@ Legacy CRM,Customer Management,Account Updates,Sales,On-Prem`;
             metrics.forEach((m: any) => {
               base[m.name] = `${m.value} ${m.unit}`;
             });
-          } catch (e) {}
+          } catch (e) { }
         }
         return base;
       });
@@ -656,6 +608,9 @@ Legacy CRM,Customer Management,Account Updates,Sales,On-Prem`;
       next(err);
     }
   });
+
+  // Health check (required by render.yaml)
+  app.get("/health", (_req, res) => res.json({ status: "ok" }));
 
   // --- Vite Integration ---
   if (!isProd) {

@@ -1,0 +1,79 @@
+{
+    "task": "DEPENDENCY_ALIGNMENT_AND_DEPLOY_FIX",
+    "context": {
+        "platform": "Render",
+        "runtime": "Node.js 22.x",
+        "package_manager": "pnpm",
+        "failure": "ERR_PNPM_OUTDATED_LOCKFILE",
+        "root_symptom": "pnpm-lock.yaml not aligned with package.json",
+        "dependency_conflicts": {
+            "@tailwindcss/vite": "^4.0.0 added",
+            "tailwindcss": "lockfile ^3.4.17 vs manifest ^4.0.0"
+        }
+    },
+    "objective": "Restore deterministic builds by aligning all dependency versions across package.json and pnpm-lock.yaml while ensuring modern compatible versions.",
+    "principles": [
+        "Apply first-principles debugging to identify the dependency mismatch.",
+        "Prefer deterministic builds using exact versions.",
+        "Ensure dependency ecosystem compatibility (Tailwind, Vite, plugins).",
+        "Minimize changes while restoring CI stability."
+    ],
+    "analysis_requirements": [
+        "Scan package.json dependencies and devDependencies.",
+        "Compare against pnpm-lock.yaml entries.",
+        "Identify version mismatches or newly added packages missing from lockfile.",
+        "Check compatibility between Tailwind, Vite, and @tailwindcss/vite plugin versions."
+    ],
+    "execution_plan": [
+        {
+            "step": 1,
+            "action": "Normalize dependency versions",
+            "details": "Convert all dependencies to explicit exact versions (no ^ or ~)."
+        },
+        {
+            "step": 2,
+            "action": "Update dependency ecosystem",
+            "details": "Ensure Tailwind, Vite, and related plugins are on compatible major versions."
+        },
+        {
+            "step": 3,
+            "action": "Regenerate lockfile",
+            "commands": [
+                "rm -f pnpm-lock.yaml",
+                "pnpm install"
+            ]
+        },
+        {
+            "step": 4,
+            "action": "Verify deterministic build",
+            "commands": [
+                "pnpm install --frozen-lockfile",
+                "pnpm run build"
+            ]
+        },
+        {
+            "step": 5,
+            "action": "Commit aligned lockfile",
+            "commands": [
+                "git add package.json pnpm-lock.yaml",
+                "git commit -m \"fix(deps): align dependency versions and regenerate lockfile\"",
+                "git push"
+            ]
+        }
+    ],
+    "render_build_command": "pnpm install --frozen-lockfile && pnpm rebuild better-sqlite3 && pnpm run build",
+    "verification": [
+        "pnpm install succeeds without lockfile errors",
+        "vite build completes successfully",
+        "Render deployment build stage succeeds",
+        "Application starts without runtime errors"
+    ],
+    "rollback": "git revert <commit_sha>",
+    "success_criteria": [
+        "package.json and pnpm-lock.yaml fully aligned",
+        "Render CI builds deterministic",
+        "No ERR_PNPM_OUTDATED_LOCKFILE errors",
+        "Application deploys and runs successfully"
+    ],
+    "one_sentence_justification": "Aligning exact dependency versions and regenerating the lockfile removes the deterministic build mismatch that causes pnpm to fail in CI environments."
+}
