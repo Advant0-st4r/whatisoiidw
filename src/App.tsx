@@ -301,6 +301,30 @@ const Capabilities = ({ user }: { user: User }) => {
         }
       />
 
+      {/* Capability Column Info Box */}
+      <div className="border-s-2 border-amber bg-amber/5 px-5 py-4 space-y-3" id="capability-info-box">
+        <p className="text-xs font-bold font-mono uppercase tracking-widest text-amber">Specify "Capabilities"</p>
+        <p className="text-sm text-text-dim leading-relaxed">
+          A clearly defined ability of a system, team, or process to consistently perform a specific function to a measurable standard.{' '}
+          <span className="text-text-dim/60">This column is mandatory — it identifies <em>what must be done</em> before performance, maturity, or outcomes can be assessed.</span>
+        </p>
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="text-xs text-text-dim uppercase tracking-wider font-medium">Example:</span>
+          <code className="bg-black/40 border border-border px-2 py-0.5 text-amber text-xs">Customer query resolution</code>
+        </div>
+        <div className="pt-1">
+          <p className="text-xs text-text-dim uppercase tracking-wider font-medium mb-2">Sample metrics</p>
+          <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1">
+            {['Average resolution time', 'First-contact resolution rate', 'Error or rework rate', 'Customer satisfaction score (CSAT)', 'Escalation rate'].map(m => (
+              <li key={m} className="flex items-center gap-2 text-xs text-text-dim">
+                <span className="w-1 h-1 bg-amber/60 rounded-full flex-shrink-0" />
+                {m}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-4">
           <Card className="p-0 overflow-hidden" id="capability-list">
